@@ -265,6 +265,24 @@ export default function CalendarView({ date, setDate, blocks, onBlocksChange, fo
     return () => clearInterval(interval);
   }, []);
 
+  // Ensure the app advances to today's date automatically at midnight
+  useEffect(() => {
+    let timer;
+    const scheduleNextMidnight = () => {
+      const now = new Date();
+      const next = new Date(now);
+      next.setHours(24, 0, 0, 0); // next local midnight
+      const ms = next.getTime() - now.getTime();
+      timer = setTimeout(() => {
+        // Jump the selected date to today to keep calendars fresh daily
+        setDate(new Date());
+        scheduleNextMidnight();
+      }, ms);
+    };
+    scheduleNextMidnight();
+    return () => { if (timer) clearTimeout(timer); };
+  }, [setDate]);
+
   // restore persisted calendar view (day/week)
   useEffect(() => {
     try {

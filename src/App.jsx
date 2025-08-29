@@ -1,5 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import './index.css';
+import './styles/components.css';
+import './styles/attachments.css';
 import CalendarView from './components/CalendarView.jsx';
 
 const START_HOUR = 5;   // 5 AM
@@ -18,14 +20,6 @@ function hoursRange(start, end) { return range(end - start + 1).map(i => start +
 function isSameDay(a, b) {
   return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
 }
-
-const SUBJECTS = [
-  { key: 'study', label: 'Study', color: 'var(--indigo-500)' },
-  { key: 'class', label: 'Class', color: 'var(--teal-600)' },
-  { key: 'exercise', label: 'Exercise', color: 'var(--orange-500)' },
-  { key: 'break', label: 'Break', color: 'var(--gray-400)' },
-  { key: 'project', label: 'Project', color: 'var(--purple-500)' },
-];
 
 function Header({ date, setDate, onClear, viewMode, setViewMode }) {
   const inputRef = useRef(null);
@@ -64,9 +58,9 @@ function Header({ date, setDate, onClear, viewMode, setViewMode }) {
                 else inputRef.current?.focus();
               }}
             >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                <rect x="3" y="5" width="18" height="16" rx="4" stroke="currentColor" strokeWidth="1.6"/>
-                <path d="M8 3v4M16 3v4M3 10h18" stroke="currentColor" strokeWidth="1.6"/>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <rect x="3" y="5" width="18" height="16" rx="3" stroke="currentColor" strokeWidth="1.6"/>
+                <path d="M3 10h18M9 5v4" stroke="currentColor" strokeWidth="1.6"/>
               </svg>
             </button>
           </div>
@@ -117,7 +111,7 @@ function PriorityList({ priorities, setPriorities }) {
       {range(3).map(i => (
         <input
           key={i}
-          className="input"
+          className="input priority-input"
           placeholder={`Priority ${i + 1}`}
           value={priorities[i] || ''}
           onChange={e => update(i, e.target.value)}
@@ -143,14 +137,6 @@ function BrainDump({ notes, setNotes }) {
     setNotes(v);
   };
 
-  const onQuickAdd = (text) => {
-    const sep = local && !local.endsWith('\n') ? '\n' : '';
-    const next = `${local}${sep}- ${text}`;
-    setLocal(next);
-    setCharCount(next.length);
-    setNotes(next);
-  };
-
   const onClear = () => {
     setLocal('');
     setCharCount(0);
@@ -174,7 +160,6 @@ function BrainDump({ notes, setNotes }) {
         <span aria-hidden="true">🧠</span>
         Brain Dump
       </h2>
-      {/* Quick add removed for a more minimalist UI */}
       <textarea
         className="textarea lined"
         placeholder="Jot ideas, tasks, and reminders..."
@@ -182,7 +167,7 @@ function BrainDump({ notes, setNotes }) {
         onChange={onChange}
         aria-label="Brain dump notes"
       />
-      <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginTop:8}}>
+      <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginTop:12}}>
         <span className="muted-help">{charCount} chars</span>
         <div style={{display:'flex', gap:8}}>
           <button className="btn secondary" onClick={onExport} aria-label="Export brain dump as text">Export</button>
@@ -424,7 +409,6 @@ function ScheduleGrid({ blocks, setBlocks, date }) {
                     <div className="slot-inner">
                       <textarea
                         className="slot-textarea"
-                        placeholder="Type task…"
                         value={(findBlockForSlot(slotIdx)?.text) || ''}
                         onChange={(e) => {
                           upsertBlockForSlot(slotIdx, (blk) => ({ ...blk, text: e.target.value }));
@@ -553,6 +537,23 @@ export default function App() {
   // After first mount, mark as hydrated so subsequent changes can be saved
   useEffect(() => {
     setIsHydrated(true);
+  }, []);
+
+  // Advance selected date to today's date automatically at local midnight
+  useEffect(() => {
+    let timer;
+    const scheduleNextMidnight = () => {
+      const now = new Date();
+      const next = new Date(now);
+      next.setHours(24, 0, 0, 0);
+      const ms = next.getTime() - now.getTime();
+      timer = setTimeout(() => {
+        setDate(new Date());
+        scheduleNextMidnight();
+      }, Math.max(1000, ms));
+    };
+    scheduleNextMidnight();
+    return () => { if (timer) clearTimeout(timer); };
   }, []);
 
   // When date changes, re-hydrate from storage AND suspend saving until loaded
